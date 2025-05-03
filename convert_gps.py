@@ -71,7 +71,7 @@ while True:
             start = "\x1b[1F"
             end = "\x1b[0K"
         comma = "\x1b[97m," if parts[2] != "" else ""
-        print(f"\x1b[{start}{current_time} \x1b[97m| \x1b[92mLong: \x1b[37m{parts[1]}{comma} \x1b[37m{parts[2]} \x1b[97m| \x1b[92mLat: \x1b[37m{parts[3]}{comma} \x1b[37m{parts[4]}{end}")
+        print(f"\x1b[93m{start}{current_time} \x1b[97m| \x1b[92mLong: \x1b[37m{parts[1]}{comma} \x1b[37m{parts[2]} \x1b[97m| \x1b[92mLat: \x1b[37m{parts[3]}{comma} \x1b[37m{parts[4]}{end}")
         time.sleep(TIME_DELAY)
     except Exception as e:
         print(f"\x1b[2F{current_time} | Bits lost... Looping again...\x1b[K")
