@@ -1,5 +1,6 @@
 import argparse
 import time
+import os
 from time import localtime, strftime
 
 parser = argparse.ArgumentParser()
@@ -30,10 +31,25 @@ def convert_to_decimal_deg(term: str, long_or_lat: str) -> str:
     deci = float(mm_1 + "." + mm_2)
     return f"{round((DD + deci/60),3)}"
 
+def fancy_waiting(msg: str, i: int) -> str:
+    if i == 0:
+        return f"{msg}."
+    elif i == 1:
+        return f"{msg}.."
+    elif i == 2:
+        return f"{msg}..."
+    else:
+        return f"{msg}..."
+error = 0
+it = -1
 while True:
+    if it == 2:
+        it = -1
+    it+=1
     current_time = strftime("%H:%M:%S", localtime())
     try:
-        with open(filename, 'r') as f:
+        with open(filename, 'r', encoding="utf-8", errors="ignore") as f:
+            #print(f.read())
             for line in f:
                 if line.startswith("$GPGLL"):
                     parts = line.split(",")
@@ -41,14 +57,24 @@ while True:
         if parts[1] != "" and parts[3] != "":
             parts[1] = convert_to_decimal_deg(parts[1], "lat")
             parts[3] = convert_to_decimal_deg(parts[3], "long")
-            flush_to_file(f"{current_time}, {parts[1]}, {parts[2]}, {parts[3]}, {parts[4]}\n")
+            flush_to_file(f"\x1b[93,m{current_time}, {parts[1]}, {parts[2]}, {parts[3]}, {parts[4]}\n")
         if parts[1] == "":
-            parts[1] = "Waiting for data..."
+            parts[1] = fancy_waiting("Waiting for data", it)
         if parts[3] == "":
-            parts[3] = "Waiting for data..."
-        print(f"\x1b[F{current_time} | Long: {parts[1]}, {parts[2]} | Lat: {parts[3]}, {parts[4]}\x1b[K")
+            parts[3] = fancy_waiting("Waiting for data", it)
+        if error == 1:
+            start = "\x1b[2F"
+            end = "\x1b[J"
+            error = 0
+        else:
+            start = "\x1b[F"
+            end = "\x1b[K"
+        comma = "\x1b[97m," if parts[2] != "" else ""
+        print(f"\x1b[93m{start}{current_time} \x1b[97m| \x1b[92mLong: \x1b[37m{parts[1]}{comma} \x1b[37m{parts[2]} \x1b[97m| \x1b[92mLat: \x1b[37m{parts[3]}{comma} \x1b[37m{parts[4]}{end}")
         time.sleep(TIME_DELAY)
-    except:
-        print(f"\x1b[F{current_time} | Bits lost... Looping again...\x1b[K")
+    except Exception as e:
+        print(f"\x1b[2F{current_time} | Bits lost... Looping again...\x1b[K")
+        print(f"Error: {e}\x1b[K")
+        error = 1
         continue
 
