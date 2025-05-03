@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project>
-  <executable name="dist/default/production/GPS.X.production.elf">
+  <executable name="dist/default/production/eee192-gps.production.elf">
     <memory name="program">
       <units>bytes</units>
       <length>262144</length>
-      <used>19868</used>
-      <free>242276</free>
+      <used>19874</used>
+      <free>242270</free>
     </memory>
     <memory name="data">
       <units>bytes</units>

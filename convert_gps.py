@@ -1,6 +1,6 @@
 import argparse
 import time
-import os
+import platform
 from time import localtime, strftime
 
 parser = argparse.ArgumentParser()
@@ -11,9 +11,11 @@ args = vars(parser.parse_args())
 TIME_DELAY = args["time"]
 filename = args["output"]
 
-
-UP = "\x1B[3A"
-CLR = "\x1B[0K"
+ESC = "\x1b["
+# if platform.system() == "Windows":
+#     ESC = "\033["
+# elif platform.system() == "Linux":
+#     ESC = "\x1B["
 
 def flush_to_file(msg: str, log_file="debug.log") -> None:
     with open(log_file, "a") as f:
@@ -57,24 +59,24 @@ while True:
         if parts[1] != "" and parts[3] != "":
             parts[1] = convert_to_decimal_deg(parts[1], "lat")
             parts[3] = convert_to_decimal_deg(parts[3], "long")
-            flush_to_file(f"\x1b[93,m{current_time}, {parts[1]}, {parts[2]}, {parts[3]}, {parts[4]}\n")
+            flush_to_file(f"{ESC}93,m{current_time}, {parts[1]}, {parts[2]}, {parts[3]}, {parts[4]}\n")
         if parts[1] == "":
             parts[1] = fancy_waiting("Waiting for data", it)
         if parts[3] == "":
             parts[3] = fancy_waiting("Waiting for data", it)
         if error == 1:
-            start = "\x1b[2F"
-            end = "\x1b[J"
+            start = "{ESC}2F"
+            end = "{ESC}0J"
             error = 0
         else:
-            start = "\x1b[F"
-            end = "\x1b[K"
-        comma = "\x1b[97m," if parts[2] != "" else ""
-        print(f"\x1b[93m{start}{current_time} \x1b[97m| \x1b[92mLong: \x1b[37m{parts[1]}{comma} \x1b[37m{parts[2]} \x1b[97m| \x1b[92mLat: \x1b[37m{parts[3]}{comma} \x1b[37m{parts[4]}{end}")
+            start = "{ESC}1F"
+            end = "{ESC}0K"
+        comma = "{ESC}97m," if parts[2] != "" else ""
+        print(f"{ESC}{start}{current_time} {ESC}97m| {ESC}92mLong: {ESC}37m{parts[1]}{comma} {ESC}37m{parts[2]} {ESC}97m| {ESC}92mLat: {ESC}37m{parts[3]}{comma} {ESC}37m{parts[4]}{end}")
         time.sleep(TIME_DELAY)
     except Exception as e:
-        print(f"\x1b[2F{current_time} | Bits lost... Looping again...\x1b[K")
-        print(f"Error: {e}\x1b[K")
+        print(f"{ESC}2F{current_time} | Bits lost... Looping again...{ESC}K")
+        print(f"Error: {e}{ESC}K")
         error = 1
         continue
 
