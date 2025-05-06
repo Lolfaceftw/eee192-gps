@@ -23,6 +23,11 @@
       <itemPath>platform/systick.c</itemPath>
       <itemPath>platform/usart.c</itemPath>
       <itemPath>platform/gps_usart.c</itemPath>
+      <itemPath>nmea_parser.h</itemPath>
+      <itemPath>nmea_parse.c</itemPath>
+      <itemPath>terminal_ui.h</itemPath>
+      <itemPath>terminal_ui.c</itemPath>
+      <itemPath>main.h</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
@@ -39,7 +44,7 @@
         <platformTool>nEdbgTool</platformTool>
         <languageToolchain>XC32</languageToolchain>
         <languageToolchainVersion>4.60</languageToolchainVersion>
-        <platform>2</platform>
+        <platform>3</platform>
       </toolsSet>
       <packs>
         <pack name="PIC32CM-LS_DFP" vendor="Microchip" version="1.3.278"/>

@@ -51,17 +51,17 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Source Files Quoted if spaced
-SOURCEFILES_QUOTED_IF_SPACED=main.c platform/gpio.c platform/systick.c platform/usart.c platform/gps_usart.c
+SOURCEFILES_QUOTED_IF_SPACED=main.c platform/gpio.c platform/systick.c platform/usart.c platform/gps_usart.c nmea_parse.c terminal_ui.c
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/main.o ${OBJECTDIR}/platform/gpio.o ${OBJECTDIR}/platform/systick.o ${OBJECTDIR}/platform/usart.o ${OBJECTDIR}/platform/gps_usart.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/main.o.d ${OBJECTDIR}/platform/gpio.o.d ${OBJECTDIR}/platform/systick.o.d ${OBJECTDIR}/platform/usart.o.d ${OBJECTDIR}/platform/gps_usart.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/main.o ${OBJECTDIR}/platform/gpio.o ${OBJECTDIR}/platform/systick.o ${OBJECTDIR}/platform/usart.o ${OBJECTDIR}/platform/gps_usart.o ${OBJECTDIR}/nmea_parse.o ${OBJECTDIR}/terminal_ui.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/main.o.d ${OBJECTDIR}/platform/gpio.o.d ${OBJECTDIR}/platform/systick.o.d ${OBJECTDIR}/platform/usart.o.d ${OBJECTDIR}/platform/gps_usart.o.d ${OBJECTDIR}/nmea_parse.o.d ${OBJECTDIR}/terminal_ui.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/main.o ${OBJECTDIR}/platform/gpio.o ${OBJECTDIR}/platform/systick.o ${OBJECTDIR}/platform/usart.o ${OBJECTDIR}/platform/gps_usart.o
+OBJECTFILES=${OBJECTDIR}/main.o ${OBJECTDIR}/platform/gpio.o ${OBJECTDIR}/platform/systick.o ${OBJECTDIR}/platform/usart.o ${OBJECTDIR}/platform/gps_usart.o ${OBJECTDIR}/nmea_parse.o ${OBJECTDIR}/terminal_ui.o
 
 # Source Files
-SOURCEFILES=main.c platform/gpio.c platform/systick.c platform/usart.c platform/gps_usart.c
+SOURCEFILES=main.c platform/gpio.c platform/systick.c platform/usart.c platform/gps_usart.c nmea_parse.c terminal_ui.c
 
 # Pack Options 
 PACK_COMMON_OPTIONS=-I "${CMSIS_DIR}/CMSIS/Core/Include"
@@ -134,6 +134,18 @@ ${OBJECTDIR}/platform/gps_usart.o: platform/gps_usart.c  .generated_files/flags/
 	@${RM} ${OBJECTDIR}/platform/gps_usart.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -MP -MMD -MF "${OBJECTDIR}/platform/gps_usart.o.d" -o ${OBJECTDIR}/platform/gps_usart.o platform/gps_usart.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}/PIC32CM-LS00" ${PACK_COMMON_OPTIONS} 
 	
+${OBJECTDIR}/nmea_parse.o: nmea_parse.c  .generated_files/flags/default/c7a89d1db53bbab5f991ebe5524f8e10a07fce0b .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/nmea_parse.o.d 
+	@${RM} ${OBJECTDIR}/nmea_parse.o 
+	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -MP -MMD -MF "${OBJECTDIR}/nmea_parse.o.d" -o ${OBJECTDIR}/nmea_parse.o nmea_parse.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}/PIC32CM-LS00" ${PACK_COMMON_OPTIONS} 
+	
+${OBJECTDIR}/terminal_ui.o: terminal_ui.c  .generated_files/flags/default/4926a1f9e32298b9a32be5e51582126d0e50b8c8 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/terminal_ui.o.d 
+	@${RM} ${OBJECTDIR}/terminal_ui.o 
+	${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG   -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -MP -MMD -MF "${OBJECTDIR}/terminal_ui.o.d" -o ${OBJECTDIR}/terminal_ui.o terminal_ui.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}/PIC32CM-LS00" ${PACK_COMMON_OPTIONS} 
+	
 else
 ${OBJECTDIR}/main.o: main.c  .generated_files/flags/default/31768f22c586f4cfab11b2632a3ff57cd1b3a12f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
 	@${MKDIR} "${OBJECTDIR}" 
@@ -164,6 +176,18 @@ ${OBJECTDIR}/platform/gps_usart.o: platform/gps_usart.c  .generated_files/flags/
 	@${RM} ${OBJECTDIR}/platform/gps_usart.o.d 
 	@${RM} ${OBJECTDIR}/platform/gps_usart.o 
 	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -MP -MMD -MF "${OBJECTDIR}/platform/gps_usart.o.d" -o ${OBJECTDIR}/platform/gps_usart.o platform/gps_usart.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}/PIC32CM-LS00" ${PACK_COMMON_OPTIONS} 
+	
+${OBJECTDIR}/nmea_parse.o: nmea_parse.c  .generated_files/flags/default/1585b63a3e88aadef8e2ee58c42c3ab82a378f90 .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/nmea_parse.o.d 
+	@${RM} ${OBJECTDIR}/nmea_parse.o 
+	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -MP -MMD -MF "${OBJECTDIR}/nmea_parse.o.d" -o ${OBJECTDIR}/nmea_parse.o nmea_parse.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}/PIC32CM-LS00" ${PACK_COMMON_OPTIONS} 
+	
+${OBJECTDIR}/terminal_ui.o: terminal_ui.c  .generated_files/flags/default/37621ae5eb0f19e4c999d982ee7242326b8aab8f .generated_files/flags/default/da39a3ee5e6b4b0d3255bfef95601890afd80709
+	@${MKDIR} "${OBJECTDIR}" 
+	@${RM} ${OBJECTDIR}/terminal_ui.o.d 
+	@${RM} ${OBJECTDIR}/terminal_ui.o 
+	${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION)  -fno-common -MP -MMD -MF "${OBJECTDIR}/terminal_ui.o.d" -o ${OBJECTDIR}/terminal_ui.o terminal_ui.c    -DXPRJ_default=$(CND_CONF)    $(COMPARISON_BUILD)  -mdfp="${DFP_DIR}/PIC32CM-LS00" ${PACK_COMMON_OPTIONS} 
 	
 endif
 

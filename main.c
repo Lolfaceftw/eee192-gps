@@ -1,234 +1,233 @@
 /**
  * @file main.c
- * @brief Module 5 Sample: "Keystroke Hexdump"
+ * @brief Main application file for the GPS Data Logger and Parser.
  *
- * @author Alberto de Villa <alberto.de.villa@eee.upd.edu.ph>
- * @date 28 Oct 2024
+ * Orchestrates GPS data reception, NMEA sentence processing (via nmea_parser module),
+ * and terminal output (via terminal_ui module). Manages overall application state.
+ * The definition of the program state (prog_state_t) and its associated flags
+ * are now located in main.h.
+ *
+ * @author Alberto de Villa <alberto.de.villa@eee.upd.edu.ph> (Original)
+ * @author Estrada (Supplemented by EEE 158 AY 24-25 1S)
+ * @author Christian Klein C. Ramos (Supplemented by EEE 192 AY 24-25 2S, Refactored, Modularized)
+ * @date May 6, 2025 // Last significant modification date
  */
 
-// Common include for the XC32 compiler
+// Standard C and Microcontroller specific includes
 #include <xc.h>
 #include <string.h>
-#include <stdio.h>
+#include <stdio.h>     // For snprintf (used by nmea_parser and terminal_ui)
 #include <stdbool.h>
 #include <stdlib.h>
 
+// Project-specific includes
+#include "main.h"          // For prog_state_t, program flags, and core app constants
 #include "platform.h"
+#include "nmea_parser.h"
+#include "terminal_ui.h"   // For UI handling functions
 
-/////////////////////////////////////////////////////////////////////////////
+// --- Application Configuration ---
+// This constant is used by main logic and passed to UI functions.
+static const bool DEBUG_MODE_PRINT_RAW_GPS = false;
 
-/*
- * Copyright message printed upon reset
- * 
- * Displaying author information is optional; but as always, must be present
- * as comments at the top of the source file for copyright purposes.
- * 
- * FIXME: Modify this prompt message to account for additional instructions.
- */
-static const char banner_msg[] =
-"\033[0m\033[2J\033[1;1H"
-"+--------------------------------------------------------------------+\r\n"
-"| EEE 192: Electrical and Electronics Engineering Laboratory VI      |\r\n"
-"|          Academic Year 2024-2025, Semester 2                       |\r\n"
-"|                                                                    |\r\n"
-"| Sensor: GPS Module                                                 |\r\n"
-"|                                                                    |\r\n"
-"| Author:  Estrada (Supplemented by EEE 158 AY 24-25 1S)             |\r\n"
-"| Date:    2025                                                      |\r\n"
-"+--------------------------------------------------------------------+\r\n"
-"\r\n"
-"Data: ";
+// --- Application Constants (main.c specific, if any beyond main.h) ---
+// ANSI codes and banner_msg are now managed by terminal_ui.c
+// Buffer sizes and prog_state_t flags are in main.h
+// NMEA identification prefixes are specific to main.c's pre-filtering logic.
+#define APP_NMEA_LINE_ENDING "\r\n"
+#define APP_NMEA_GPGLL_PREFIX "$GPGLL,"
+#define APP_NMEA_GPGLL_PREFIX_LEN (sizeof(APP_NMEA_GPGLL_PREFIX) - 1)
 
-static const char ESC_SEQ_KEYP_LINE[] = "\033[1;1H";
-static const char ESC_SEQ_IDLE_INF[]  = "\033[20;1H";
+// LED Indicator (specific to main.c's direct hardware interaction)
+#define LED_ACTIVITY_PORT_GROUP (PORT_SEC_REGS->GROUP[0])
+#define LED_ACTIVITY_PIN        (1 << 15)
 
-//////////////////////////////////////////////////////////////////////////////
+// prog_state_t typedef and PROG_FLAG_* definitions are in main.h
 
-// Program state machine
-typedef struct prog_state_type
-{
-	// Flags for this program
-#define PROG_FLAG_BANNER_PENDING        0x0001	// Waiting to transmit the banner
-#define PROG_FLAG_UPDATE_PENDING        0x0002	// Waiting to transmit updates
-#define PROG_FLAG_GPS_UPDATE_PENDING	0x0004	// Waiting to transmit updates
-#define PROG_FLAG_GEN_COMPLETE      0x8000	// Message generation has been done, but transmission has not occurred
-    
-	uint16_t flags;
-	
-	// Transmit stuff
-	platform_usart_tx_bufdesc_t tx_desc[4];
-	char tx_buf[64];
-	uint16_t tx_blen;
-	
-	// Receiver stuff
-	platform_usart_rx_async_desc_t rx_desc;
-	uint16_t rx_desc_blen;
-	char rx_desc_buf[16];
-    
-    // Receive from GPS
-    platform_usart_rx_async_desc_t gps_rx_desc;
-    uint16_t gps_rx_desc_blen;
-    char gps_rx_desc_buf[64];
-    
-} prog_state_t;
+// --- Static Function Prototypes (main.c internal logic) ---
+static void handle_platform_events(prog_state_t *ps);
+static void handle_gps_reception(prog_state_t *ps);
+static void handle_gps_sentence_processing(prog_state_t *ps, char* gpgll_storage_buf, size_t gpgll_storage_size);
+static void handle_gpgll_parsing_and_request_display(prog_state_t *ps, char* gpgll_to_parse_storage);
+static void remove_line_from_gps_assembly_buffer(prog_state_t *ps, int line_len_with_crlf);
 
-/*
- * Initialize the main program state
- * 
- * This style might be familiar to those accustomed to he programming
- * conventions employed by the Arduino platform.
- */
 static void prog_setup(prog_state_t *ps)
 {
-	memset(ps, 0, sizeof(*ps));
-	
+	memset(ps, 0, sizeof(prog_state_t));
+    ps->banner_has_been_displayed_this_session = false;
 	platform_init();
 	
-    // SERCOM3 - Keyb + PIC32
+	ps->cdc_rx_desc.buf     = ps->cdc_rx_buf;
+	ps->cdc_rx_desc.max_len = RX_BUFFER_CDC_SIZE_APP; // Constant from main.h
+	platform_usart_cdc_rx_async(&ps->cdc_rx_desc);
     
-	ps->rx_desc.buf     = ps->rx_desc_buf;
-	ps->rx_desc.max_len = sizeof(ps->rx_desc_buf);
-	
-	platform_usart_cdc_rx_async(&ps->rx_desc);
-    
-    // SERCOM1 - GPS
-
-    ps->gps_rx_desc.buf = ps->gps_rx_desc_buf;
-    ps->gps_rx_desc.max_len = sizeof(ps->gps_rx_desc_buf);
-    
+    ps->gps_rx_desc.buf     = ps->gps_rx_buf;
+    ps->gps_rx_desc.max_len = RX_BUFFER_GPS_SIZE_APP; // Constant from main.h
     gps_platform_usart_cdc_rx_async(&ps->gps_rx_desc);
-	return;
 }
 
-double convert_to_decimal(const char* raw, char direction, int is_lat) {
-    int deg_len = is_lat ? 2 : 3;
-    char deg_str[4] = {0};
-    strncpy(deg_str, raw, deg_len);
-    double degrees = atof(deg_str);
-    double minutes = atof(raw + deg_len);
-    double decimal = degrees + (minutes / 60.0);
-    if (direction == 'S' || direction == 'W') decimal *= -1;
-    return decimal;
+static void handle_platform_events(prog_state_t *ps) {
+    platform_do_loop_one();
+    uint16_t pb_event = platform_pb_get_event();
+	if ((pb_event & PLATFORM_PB_ONBOARD_PRESS) != 0) {
+		ps->flags |= PROG_FLAG_BANNER_PENDING; // PROG_FLAG_* defined in main.h
+	}
 }
 
-int parse_gpgll_to_buffer(const char* sentence, char* out_buf) {
-    char buf[128];
-    strncpy(buf, sentence, sizeof(buf));
-    buf[sizeof(buf) - 1] = '\0';
+static void handle_gps_reception(prog_state_t *ps) {
+    if (ps->gps_rx_desc.compl_type == PLATFORM_USART_RX_COMPL_DATA) {
+        LED_ACTIVITY_PORT_GROUP.PORT_OUTSET = LED_ACTIVITY_PIN;
+        uint16_t received_len = ps->gps_rx_desc.compl_info.data_len;
 
-    char* token = strtok(buf, ",");
-    if (!token || strncmp(token, "$GPGLL", 6) != 0) return 0;
+        if (ps->gps_assembly_len + received_len < GPS_ASSEMBLY_BUF_SIZE_APP) { // Constant from main.h
+            memcpy(ps->gps_assembly_buf + ps->gps_assembly_len, ps->gps_rx_buf, received_len);
+            ps->gps_assembly_len += received_len;
+            ps->gps_assembly_buf[ps->gps_assembly_len] = '\0';
 
-    char *lat = strtok(NULL, ",");
-    char *lat_dir = strtok(NULL, ",");
-    char *lon = strtok(NULL, ",");
-    char *lon_dir = strtok(NULL, ",");
-    char *time = strtok(NULL, ",");
-    char *status = strtok(NULL, "*");
-
-    if (!lat || !lat_dir || !lon || !lon_dir || !time || !status) return 0;
-
-    double latitude = convert_to_decimal(lat, lat_dir[0], 1);
-    double longitude = convert_to_decimal(lon, lon_dir[0], 0);
-
-    sprintf(out_buf,
-        "Latitude: %.6f\nLongitude: %.6f\nTime: %.2s:%.2s:%.2s\nStatus: %c\n",
-        latitude, longitude, time, time+2, time+4, status[0]);
-
-    return 1;
+            if (strstr(ps->gps_assembly_buf, APP_NMEA_LINE_ENDING) != NULL) {
+                if (!(ps->flags & PROG_FLAG_GPS_UPDATE_PENDING)) {
+                     ps->flags |= PROG_FLAG_GPS_UPDATE_PENDING;
+                }
+            }
+        } else {
+            ps->gps_assembly_len = 0;
+            ps->gps_assembly_buf[0] = '\0';
+        }
+        ps->gps_rx_desc.compl_type = PLATFORM_USART_RX_COMPL_NONE;
+        gps_platform_usart_cdc_rx_async(&ps->gps_rx_desc);
+    }
 }
 
-/*
- * Do a single loop of the main program
- * 
- * This style might be familiar to those accustomed to he programming
- * conventions employed by the Arduino platform.
- */
+static void remove_line_from_gps_assembly_buffer(prog_state_t *ps, int line_len_with_crlf) {
+    if (line_len_with_crlf <= 0 || (uint16_t)line_len_with_crlf > ps->gps_assembly_len) {
+        ps->gps_assembly_len = 0;
+        ps->gps_assembly_buf[0] = '\0';
+        ps->flags &= ~PROG_FLAG_GPS_UPDATE_PENDING;
+        return;
+    }
+    ps->gps_assembly_len -= line_len_with_crlf;
+    memmove(ps->gps_assembly_buf, ps->gps_assembly_buf + line_len_with_crlf, ps->gps_assembly_len);
+    ps->gps_assembly_buf[ps->gps_assembly_len] = '\0';
+
+    if (strstr(ps->gps_assembly_buf, APP_NMEA_LINE_ENDING) == NULL) {
+        ps->flags &= ~PROG_FLAG_GPS_UPDATE_PENDING;
+    }
+}
+
+static void handle_gps_sentence_processing(prog_state_t *ps, char* gpgll_storage_buf, size_t gpgll_storage_size) {
+    if (!(ps->flags & PROG_FLAG_GPS_UPDATE_PENDING)) return;
+    // The UI functions called below will check PROG_FLAG_TX_BUFFER_BUSY and platform_usart_cdc_tx_busy()
+    // No need to check them here before calling UI functions.
+
+    char* newline_ptr = strstr(ps->gps_assembly_buf, APP_NMEA_LINE_ENDING);
+    if (newline_ptr == NULL) {
+        ps->flags &= ~PROG_FLAG_GPS_UPDATE_PENDING;
+        return;
+    }
+
+    int sentence_content_len = newline_ptr - ps->gps_assembly_buf;
+    int total_line_len = sentence_content_len + strlen(APP_NMEA_LINE_ENDING);
+
+    char current_sentence_content[GPS_ASSEMBLY_BUF_SIZE_APP];
+    if (sentence_content_len >= (int)sizeof(current_sentence_content)) {
+        remove_line_from_gps_assembly_buffer(ps, total_line_len);
+        return;
+    }
+    memcpy(current_sentence_content, ps->gps_assembly_buf, sentence_content_len);
+    current_sentence_content[sentence_content_len] = '\0';
+
+    bool is_gpgll = (strncmp(current_sentence_content, APP_NMEA_GPGLL_PREFIX, APP_NMEA_GPGLL_PREFIX_LEN) == 0);
+
+    if (DEBUG_MODE_PRINT_RAW_GPS) {
+        // Prepare the raw line from the assembly buffer to pass to the UI function.
+        // Ensure the buffer is large enough. total_line_len includes CRLF.
+        char raw_line_to_send[GPS_ASSEMBLY_BUF_SIZE_APP]; // Max possible line size
+        if(total_line_len < sizeof(raw_line_to_send)){
+             memcpy(raw_line_to_send, ps->gps_assembly_buf, total_line_len);
+            // raw_line_to_send[total_line_len] = '\0'; // Not strictly needed as ui_handle_raw_data_transmission takes length.
+
+            if (ui_handle_raw_data_transmission(ps, raw_line_to_send, total_line_len)) {
+                // Raw send initiated successfully by UI module.
+                if (is_gpgll && gpgll_storage_buf[0] == '\0' && !(ps->flags & PROG_FLAG_PARSED_GPGLL_PENDING)) {
+                    strncpy(gpgll_storage_buf, current_sentence_content, gpgll_storage_size - 1);
+                    gpgll_storage_buf[gpgll_storage_size - 1] = '\0';
+                    ps->flags |= PROG_FLAG_PARSED_GPGLL_PENDING;
+                }
+                remove_line_from_gps_assembly_buffer(ps, total_line_len);
+                return; // Line processed
+            } else {
+                // UI module indicated it couldn't send (e.g., TX busy). Do not remove line.
+                return; 
+            }
+        } else {
+             // This case should ideally not be hit if buffer sizes are consistent.
+            remove_line_from_gps_assembly_buffer(ps, total_line_len); // Discard if too long for temp buffer
+            return;
+        }
+    }
+
+    // If not in DEBUG_MODE_PRINT_RAW_GPS or if raw send was skipped/failed
+    if (is_gpgll) {
+        if (gpgll_storage_buf[0] == '\0' && !(ps->flags & PROG_FLAG_PARSED_GPGLL_PENDING)) {
+            strncpy(gpgll_storage_buf, current_sentence_content, gpgll_storage_size - 1);
+            gpgll_storage_buf[gpgll_storage_size - 1] = '\0';
+            ps->flags |= PROG_FLAG_PARSED_GPGLL_PENDING;
+        }
+    }
+    remove_line_from_gps_assembly_buffer(ps, total_line_len); // Line processed or stored
+}
+
+static void handle_gpgll_parsing_and_request_display(prog_state_t *ps, char* gpgll_to_parse_storage) {
+    if (!(ps->flags & PROG_FLAG_PARSED_GPGLL_PENDING)) return;
+    // The ui_handle_parsed_data_transmission function will check other TX busy conditions.
+
+    if (gpgll_to_parse_storage[0] != '\0') {
+        // Buffer for the output of nmea_parse_gpgll_and_format (the "Time | Lon | Lat\r\n" string)
+        char parsed_data_output[TX_BUFFER_SIZE_APP]; // Should be large enough for formatted output
+
+        if (nmea_parse_gpgll_and_format(gpgll_to_parse_storage, parsed_data_output, sizeof(parsed_data_output))) {
+            // Parsing successful. Request UI module to display it.
+            // The UI module will handle its transmission and related flag updates (TX_BUFFER_BUSY, PARSED_GPGLL_PENDING).
+            ui_handle_parsed_data_transmission(ps, parsed_data_output, gpgll_to_parse_storage, DEBUG_MODE_PRINT_RAW_GPS);
+        } else {
+            // Parsing failed. Clear flags and storage to prevent retrying a bad parse.
+            ps->flags &= ~PROG_FLAG_PARSED_GPGLL_PENDING;
+            gpgll_to_parse_storage[0] = '\0';
+            // Consider logging: DEBUG_PRINT("Main: Parsing stored GPGLL failed.");
+        }
+    } else {
+        // PROG_FLAG_PARSED_GPGLL_PENDING was set, but storage is empty. Logic error.
+        ps->flags &= ~PROG_FLAG_PARSED_GPGLL_PENDING; // Clear flag to recover.
+        // Consider logging: DEBUG_PRINT("Main: Error: PARSED_GPGLL_PENDING set, but no GPGLL stored.");
+    }
+}
+
 static void prog_loop_one(prog_state_t *ps)
 {
-	uint16_t a = 0;
-	
-	// Do one iteration of the platform event loop first.
-	platform_do_loop_one();
-	
-	// Something happened to the pushbutton?
-	if ((a = platform_pb_get_event()) != 0) {
-		if ((a & PLATFORM_PB_ONBOARD_PRESS) != 0) {
-			// Print out the banner
-			ps->flags |= PROG_FLAG_BANNER_PENDING;
-		}
-		a = 0;
-	}
-	
-	////////////////////////////////////////////////////////////////////
-	
-	// Process any pending flags (BANNER)
-	do {
-		if ((ps->flags & PROG_FLAG_BANNER_PENDING) == 0)
-			break;
-		
-		if (platform_usart_cdc_tx_busy())
-			break;
-		
-		if ((ps->flags & PROG_FLAG_GEN_COMPLETE) == 0) {
-			// Message has not been generated.
-			ps->tx_desc[0].buf = banner_msg;
-			ps->tx_desc[0].len = sizeof(banner_msg)-1;
-			ps->flags |= PROG_FLAG_GEN_COMPLETE;
-		}
-		
-		if (platform_usart_cdc_tx_async(&ps->tx_desc[0], 1)) {
-			ps->flags &= ~(PROG_FLAG_BANNER_PENDING | PROG_FLAG_GEN_COMPLETE);
-		}
-	} while (0);
-	
-    // Something from the SERCOM1 UART?
-	if (ps->gps_rx_desc.compl_type == PLATFORM_USART_RX_COMPL_DATA) {
-        PORT_SEC_REGS->GROUP[0].PORT_OUTSET = (1 << 15);
-        ps->flags |= PROG_FLAG_GPS_UPDATE_PENDING;
-        ps->gps_rx_desc_blen = ps->gps_rx_desc.compl_info.data_len;
-    }
+    // Static buffer in main.c to hold the raw GPGLL NMEA sentence content before parsing.
+    static char gpgll_raw_nmea_to_parse[MAX_GPGLL_STORE_LEN_APP] = {0}; // MAX_GPGLL_STORE_LEN_APP from main.h
     
-    // Process any pending GPS update flags
-    do {
-		if ((ps->flags & PROG_FLAG_GPS_UPDATE_PENDING) == 0)
-			break;
-		
-		if (platform_usart_cdc_tx_busy())
-			break;
-		
-		if ((ps->flags & PROG_FLAG_GEN_COMPLETE) == 0) {
-			ps->tx_desc[0].buf = ps->gps_rx_desc_buf;;
-			ps->tx_desc[0].len = ps->gps_rx_desc_blen;
-		}
-        
-		if (platform_usart_cdc_tx_async(&ps->tx_desc[0], 2)) {
-			ps->gps_rx_desc.compl_type = PLATFORM_USART_RX_COMPL_NONE;
-			gps_platform_usart_cdc_rx_async(&ps->gps_rx_desc);
-			ps->flags &= ~(PROG_FLAG_GPS_UPDATE_PENDING | PROG_FLAG_GEN_COMPLETE);
-		}
-	} while (0);
-	
-	// Done
-	return;
+    LED_ACTIVITY_PORT_GROUP.PORT_OUTCLR = LED_ACTIVITY_PIN;
+
+	handle_platform_events(ps);
+    handle_gps_reception(ps);
+
+    // --- UI and Data Transmission Handling ---
+    // Calls to UI module functions. These functions will internally manage
+    // PROG_FLAG_TX_BUFFER_BUSY and check platform_usart_cdc_tx_busy().
+    ui_handle_banner_transmission(ps);
+    
+    handle_gps_sentence_processing(ps, gpgll_raw_nmea_to_parse, sizeof(gpgll_raw_nmea_to_parse));
+
+    handle_gpgll_parsing_and_request_display(ps, gpgll_raw_nmea_to_parse);
 }
 
-// main() -- the heart of the program
 int main(void)
 {
-	prog_state_t ps;
-	
-	// Initialization time	
-	prog_setup(&ps);
-	
-	/*
-	 * Microcontroller main()'s are supposed to never return (welp, they
-	 * have none to return to); hence the intentional infinite loop.
-	 */
+	prog_state_t ps_instance;
+	prog_setup(&ps_instance);
 	for (;;) {
-		prog_loop_one(&ps);
+		prog_loop_one(&ps_instance);
 	}
-    
-    // This line must never be reached
-    return 1;
+    return 1; // Should not be reached
 }
