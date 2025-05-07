@@ -28,7 +28,7 @@
 
 // --- Application Configuration ---
 // This constant is used by main logic and passed to UI functions.
-static const bool DEBUG_MODE_PRINT_RAW_GPS = true;
+static const bool DEBUG_MODE_PRINT_RAW_GPS = false;
 
 // --- Application Constants (main.c specific, if any beyond main.h) ---
 // ANSI codes and banner_msg are now managed by terminal_ui.c

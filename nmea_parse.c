@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h> // For atof, atoi
+// No need for math.h if fabs is not used, and convert_nmea_coord_to_degrees returns positive values.
 
 // NMEA sentence specifics used internally by the parser
 #define NMEA_GPGLL_PREFIX_INTERNAL "$GPGLL,"
@@ -62,31 +63,24 @@ static bool format_local_time(const char* utc_time_str, char* out_buf, size_t ou
  *
  * @param value_str The NMEA coordinate string (e.g., "4043.9620" or "07959.0350").
  * @param deg_len The number of characters representing the whole degrees part (2 for lat, 3 for lon).
- * @return The coordinate in decimal degrees, or 0.0 if input is invalid or empty.
+ * @return The coordinate in decimal degrees (always positive), or 0.0 if input is invalid or empty.
  */
 static double convert_nmea_coord_to_degrees(const char* value_str, int deg_len) {
     if (value_str == NULL || strlen(value_str) == 0) {
         return 0.0; // Empty or invalid input
     }
     
-    // Check if the actual length is less than deg_len, which means minutes part is missing or malformed.
-    // atof will handle non-numeric parts gracefully, but we need enough chars for degrees.
     if (strlen(value_str) < (size_t)deg_len) {
-         // Not enough characters for the degree part, treat as 0 or handle error
-        return 0.0; // Or some other error indicator if preferred
+        return 0.0; // Not enough characters for the degree part
     }
 
+    char deg_str[8]; 
+    char min_str[16]; 
 
-    char deg_str[8]; // Sufficient for "DDD" + null terminator
-    char min_str[16]; // Sufficient for "mm.mmmm..." + null terminator
-
-    // Extract degrees part
     strncpy(deg_str, value_str, deg_len);
     deg_str[deg_len] = '\0';
     double degrees = atof(deg_str);
 
-    // Extract minutes part (the rest of the string after the degrees part)
-    // Ensure there are characters remaining for minutes
     if (strlen(value_str) > (size_t)deg_len) {
         strncpy(min_str, value_str + deg_len, sizeof(min_str) - 1);
         min_str[sizeof(min_str) - 1] = '\0';
@@ -104,35 +98,31 @@ bool nmea_parse_gpgll_and_format(const char* gpgll_sentence, char* out_buf, size
     }
     out_buf[0] = '\0'; // Initialize output buffer
 
-    // Validate GPGLL prefix
     if (strncmp(gpgll_sentence, NMEA_GPGLL_PREFIX_INTERNAL, NMEA_GPGLL_PREFIX_LEN_INTERNAL) != 0) {
         return false; // Not a GPGLL sentence
     }
 
-    // Create a mutable copy for tokenizing
     char temp_sentence[NMEA_PARSER_MAX_GPGLL_CONTENT_LEN + NMEA_GPGLL_PREFIX_LEN_INTERNAL + 1];
     strncpy(temp_sentence, gpgll_sentence, sizeof(temp_sentence) - 1);
     temp_sentence[sizeof(temp_sentence) - 1] = '\0';
 
     char* fields[GPGLL_MAX_FIELDS];
-    for (int i = 0; i < GPGLL_MAX_FIELDS; ++i) fields[i] = ""; // Initialize with empty strings
+    for (int i = 0; i < GPGLL_MAX_FIELDS; ++i) fields[i] = ""; 
 
-    char *tokenizer_ptr = temp_sentence + NMEA_GPGLL_PREFIX_LEN_INTERNAL; // Start after "$GPGLL,"
+    char *tokenizer_ptr = temp_sentence + NMEA_GPGLL_PREFIX_LEN_INTERNAL; 
     int field_count = 0;
     char *field_start = tokenizer_ptr;
 
-    // Tokenize the sentence
     while (*tokenizer_ptr && field_count < GPGLL_MAX_FIELDS) {
-        if (*tokenizer_ptr == ',' || *tokenizer_ptr == '*') { // Field delimiter or checksum start
+        if (*tokenizer_ptr == ',' || *tokenizer_ptr == '*') { 
             char delimiter = *tokenizer_ptr;
-            *tokenizer_ptr = '\0'; // Null-terminate current field
+            *tokenizer_ptr = '\0'; 
             fields[field_count++] = field_start;
             field_start = tokenizer_ptr + 1;
-            if (delimiter == '*') break; // Checksum reached, no more fields
+            if (delimiter == '*') break; 
         }
         tokenizer_ptr++;
     }
-    // Capture the last field if it exists and wasn't followed by a delimiter (e.g., mode indicator)
     if (*field_start != '\0' && field_count < GPGLL_MAX_FIELDS && field_start < tokenizer_ptr) {
          fields[field_count++] = field_start;
     }
@@ -143,49 +133,44 @@ bool nmea_parse_gpgll_and_format(const char* gpgll_sentence, char* out_buf, size
     const char* lon_dir_str = fields[GPGLL_FIELD_LON_DIR];
     const char* utc_time_str = (field_count > GPGLL_FIELD_UTC_TIME) ? fields[GPGLL_FIELD_UTC_TIME] : "";
 
-    // --- Prepare Time Output String (Local Time) ---
     char time_output_str[NMEA_PARSER_MAX_TIME_STR_LEN];
     format_local_time(utc_time_str, time_output_str, sizeof(time_output_str));
 
     // --- Prepare Latitude Output String ---
     char lat_output_str[NMEA_PARSER_MAX_COORD_STR_LEN];
-    bool lat_has_value = (strlen(lat_val_str) > 0);
-    bool lat_has_direction = (strlen(lat_dir_str) > 0 && (lat_dir_str[0] == 'N' || lat_dir_str[0] == 'S'));
+    bool lat_val_is_present = (strlen(lat_val_str) > 0);
+    bool lat_dir_is_valid_char = (strlen(lat_dir_str) > 0 && (lat_dir_str[0] == 'N' || lat_dir_str[0] == 'S'));
 
-    if (lat_has_value) {
-        double lat_degrees = convert_nmea_coord_to_degrees(lat_val_str, 2); // Latitude uses DDmm.mm (2 digits for degrees)
-        if (lat_has_direction && lat_dir_str[0] == 'S') {
-            lat_degrees *= -1.0;
-        }
-        // Using "°" for degree symbol. Ensure your terminal supports UTF-8 or change to " deg".
-        snprintf(lat_output_str, sizeof(lat_output_str), "Lat: %.6f°", lat_degrees);
+    if (lat_val_is_present) {
+        double lat_degrees = convert_nmea_coord_to_degrees(lat_val_str, 2); // 2 digits for degrees in latitude
+        char lat_direction_to_display = (lat_dir_is_valid_char) ? lat_dir_str[0] : '-';
+        // REMOVED: Logic that made lat_degrees negative for 'S'
+        snprintf(lat_output_str, sizeof(lat_output_str), "Lat: %.6f deg, %c", lat_degrees, lat_direction_to_display);
     } else {
-        snprintf(lat_output_str, sizeof(lat_output_str), "Lat: Waiting...");
+        snprintf(lat_output_str, sizeof(lat_output_str), "Lat: Waiting for data..., -");
     }
 
     // --- Prepare Longitude Output String ---
     char lon_output_str[NMEA_PARSER_MAX_COORD_STR_LEN];
-    bool lon_has_value = (strlen(lon_val_str) > 0);
-    bool lon_has_direction = (strlen(lon_dir_str) > 0 && (lon_dir_str[0] == 'E' || lon_dir_str[0] == 'W'));
+    bool lon_val_is_present = (strlen(lon_val_str) > 0);
+    bool lon_dir_is_valid_char = (strlen(lon_dir_str) > 0 && (lon_dir_str[0] == 'E' || lon_dir_str[0] == 'W'));
 
-    if (lon_has_value) {
-        double lon_degrees = convert_nmea_coord_to_degrees(lon_val_str, 3); // Longitude uses DDDmm.mm (3 digits for degrees)
-        if (lon_has_direction && lon_dir_str[0] == 'W') {
-            lon_degrees *= -1.0;
-        }
-        // Using "°" for degree symbol.
-        snprintf(lon_output_str, sizeof(lon_output_str), "Long: %.6f°", lon_degrees);
+    if (lon_val_is_present) {
+        double lon_degrees = convert_nmea_coord_to_degrees(lon_val_str, 3); // 3 digits for degrees in longitude
+        char lon_direction_to_display = (lon_dir_is_valid_char) ? lon_dir_str[0] : '-';
+        // REMOVED: Logic that made lon_degrees negative for 'W'
+        snprintf(lon_output_str, sizeof(lon_output_str), "Long: %.6f deg, %c", lon_degrees, lon_direction_to_display);
     } else {
-        snprintf(lon_output_str, sizeof(lon_output_str), "Long: Waiting...");
+        snprintf(lon_output_str, sizeof(lon_output_str), "Long: Waiting for data..., -");
     }
 
     // --- Combine into the final output buffer ---
-    // Swapped lat_output_str and lon_output_str here for "Time | Lat | Lon" format
+    // Format: "Time | Lat | Lon\r\n"
     int written = snprintf(out_buf, out_buf_size, "%s | %s | %s%s",
                            time_output_str,
-                           lat_output_str,  // Latitude now comes before Longitude
+                           lat_output_str,
                            lon_output_str,
-                           NMEA_LINE_ENDING_INTERNAL); // Or just "\r\n"
+                           NMEA_LINE_ENDING_INTERNAL);
 
     return (written > 0 && (size_t)written < out_buf_size);
 }
