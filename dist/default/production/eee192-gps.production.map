@@ -1,7 +1,7 @@
 Archive member included to satisfy reference by file (symbol)
 
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libpic32c.a(data_init.o)
-                              C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o (__pic32c_data_initialization)
+                              C:\Users\Ck\AppData\Local\Temp\cchiZhln.o (__pic32c_data_initialization)
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(memcpy.o)
                               build/default/production/main.o (memcpy)
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(memmove.o)
@@ -19,7 +19,7 @@ c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../.
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(stpncpy.o)
                               c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(strncpy.o) (__stpncpy)
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-musl.a(__libc_start_main.o)
-                              C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o (__libc_init_array)
+                              C:\Users\Ck\AppData\Local\Temp\cchiZhln.o (__libc_init_array)
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-musl.a(libc.o)
                               c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-musl.a(__libc_start_main.o) (__progname_full)
 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-musl.a(__sio_snprintf_cdns.o)
@@ -176,7 +176,7 @@ Microchip PIC32 Memory-Usage Report By Module
          948           0          44         992         3e0    gps_usart.o            build/default/production/platform/gps_usart.o
          814           0          12         826         33a    systick.o              build/default/production/platform/systick.o
          802           0           0         802         322    _udivmoddi4.o          libgcc.a
-         476           0           0         476         1dc    ccrWkfRd.o             C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+         476           0           0         476         1dc    cchiZhln.o             C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
          182           0           0         182          b6    __pop_int.o            libc-musl.a
          174           0           0         174          ae    __fmt_d.o              libc-musl.a
          144           0           0         144          90    data_init              data_init
@@ -377,7 +377,7 @@ LOAD build/default/production/platform/gps_usart.o
 LOAD build/default/production/nmea_parse.o
 LOAD build/default/production/terminal_ui.o
                 0x0000000000000001                __MPLAB_BUILD = 0x1
-LOAD C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+LOAD C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
 START GROUP
 LOAD c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libpic32c.a
 LOAD c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a
@@ -427,7 +427,7 @@ LOAD c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/th
                 0x0000000000000000                _sfixed = .
  *(.vectors .vectors.* .vectors_default .vectors_default.*)
  .vectors.default
-                0x0000000000000000      0x15c C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+                0x0000000000000000      0x15c C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
                 0x0000000000000000                exception_table
  *(.isr_vector)
  *(.reset*)
@@ -532,7 +532,7 @@ LOAD stack
  .ARM.attributes
                 0x0000000000000172       0x30 build/default/production/terminal_ui.o
  .ARM.attributes
-                0x00000000000001a2       0x30 C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+                0x00000000000001a2       0x30 C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
  .ARM.attributes
                 0x00000000000001d2       0x30 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libpic32c.a(data_init.o)
  .ARM.attributes
@@ -610,7 +610,7 @@ LOAD stack
  .comment       0x000000000000002b       0x2c build/default/production/platform/gps_usart.o
  .comment       0x000000000000002b       0x2c build/default/production/nmea_parse.o
  .comment       0x000000000000002b       0x2c build/default/production/terminal_ui.o
- .comment       0x000000000000002b       0x2c C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+ .comment       0x000000000000002b       0x2c C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
  .comment       0x000000000000002b       0x2c c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libpic32c.a(data_init.o)
  .comment       0x000000000000002b       0x2c c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(memcpy.o)
  .comment       0x000000000000002b       0x2c c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(memmove.o)
@@ -1159,7 +1159,7 @@ LOAD stack
  .bss           0x0000000000000000        0x0 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libc-size-musl.a(memcpy.o)
 
 .bss%z30        0x0000000000000000        0x0
- .bss           0x0000000000000000        0x0 C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+ .bss           0x0000000000000000        0x0 C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
 
 .bss%z31        0x0000000000000000        0x0
  .bss           0x0000000000000000        0x0 build/default/production/terminal_ui.o
@@ -1277,7 +1277,7 @@ LOAD stack
  .data          0x0000000000000000        0x0 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libpic32c.a(data_init.o)
 
 .data%z67       0x0000000000000000        0x0
- .data          0x0000000000000000        0x0 C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+ .data          0x0000000000000000        0x0 C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
 
 .data%z68       0x0000000000000000        0x0
  .data          0x0000000000000000        0x0 build/default/production/terminal_ui.o
@@ -1392,7 +1392,7 @@ LOAD stack
 .text.Reset_Handler%27
                 0x0000000000002b1c       0x7e
  .text.Reset_Handler
-                0x0000000000002b1c       0x7e C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+                0x0000000000002b1c       0x7e C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
                 0x0000000000002b1c                Reset_Handler
 
 .text.__pad%28  0x0000000000002b9a       0x7a
@@ -1611,7 +1611,7 @@ LOAD stack
 .text.Dummy_Handler%67
                 0x000000000000163a        0x2
  .text.Dummy_Handler
-                0x000000000000163a        0x2 C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+                0x000000000000163a        0x2 C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
                 0x000000000000163a                SVCall_Handler
                 0x000000000000163a                SERCOM0_2_Handler
                 0x000000000000163a                EVSYS_0_Handler
@@ -1788,7 +1788,7 @@ LOAD stack
  .text          0x0000000000000000        0x0 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/../../../../pic32c/lib/thumb/v8-m.base/nofp\libpic32c.a(data_init.o)
 
 .text%z106      0x0000000000000000        0x0
- .text          0x0000000000000000        0x0 C:\Users\Ck\AppData\Local\Temp\ccrWkfRd.o
+ .text          0x0000000000000000        0x0 C:\Users\Ck\AppData\Local\Temp\cchiZhln.o
 
 .text%z107      0x0000000000000000        0x0
  .text          0x0000000000000000        0x0 c:/program files/microchip/xc32/v4.60/bin/bin/../../lib/gcc/pic32c/8.3.1/thumb/v8-m.base/nofp/crti.o
