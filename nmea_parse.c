@@ -158,7 +158,7 @@ bool nmea_parse_gpgll_and_format(const char* gpgll_sentence, char* out_buf, size
             lat_degrees *= -1.0;
         }
         // Using "°" for degree symbol. Ensure your terminal supports UTF-8 or change to " deg".
-        snprintf(lat_output_str, sizeof(lat_output_str), "Lat: %.6f°", lat_degrees);
+        snprintf(lat_output_str, sizeof(lat_output_str), "Lat: %.6f deg", lat_degrees);
     } else {
         snprintf(lat_output_str, sizeof(lat_output_str), "Lat: Waiting...");
     }
@@ -174,7 +174,7 @@ bool nmea_parse_gpgll_and_format(const char* gpgll_sentence, char* out_buf, size
             lon_degrees *= -1.0;
         }
         // Using "°" for degree symbol.
-        snprintf(lon_output_str, sizeof(lon_output_str), "Long: %.6f°", lon_degrees);
+        snprintf(lon_output_str, sizeof(lon_output_str), "Long: %.6f deg", lon_degrees);
     } else {
         snprintf(lon_output_str, sizeof(lon_output_str), "Long: Waiting...");
     }

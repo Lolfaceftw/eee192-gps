@@ -34,17 +34,22 @@ def convert_to_decimal_deg(term: str, long_or_lat: str) -> str:
 
 def fancy_waiting(msg: str, i: int) -> str:
     if i == 0:
-        return f"{msg}."
+        return f"{msg}"
     elif i == 1:
-        return f"{msg}.."
+        return f"{msg}."
     elif i == 2:
+        return f"{msg}.."
+    elif i == 3:
         return f"{msg}..."
     else:
         return f"{msg}..."
 error = 0
 it = -1
+
+# Clear Terminal
+print("\x1b[2J\x1b[1;1H")
 while True:
-    if it == 2:
+    if it == 3:
         it = -1
     it+=1
     current_time = strftime("%H:%M:%S", localtime())
