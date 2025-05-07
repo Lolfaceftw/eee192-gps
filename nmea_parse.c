@@ -180,10 +180,11 @@ bool nmea_parse_gpgll_and_format(const char* gpgll_sentence, char* out_buf, size
     }
 
     // --- Combine into the final output buffer ---
+    // Swapped lat_output_str and lon_output_str here for "Time | Lat | Lon" format
     int written = snprintf(out_buf, out_buf_size, "%s | %s | %s%s",
                            time_output_str,
-                           lon_output_str,  // Swapped order to match typical "Time | Lon | Lat"
-                           lat_output_str,
+                           lat_output_str,  // Latitude now comes before Longitude
+                           lon_output_str,
                            NMEA_LINE_ENDING_INTERNAL); // Or just "\r\n"
 
     return (written > 0 && (size_t)written < out_buf_size);
