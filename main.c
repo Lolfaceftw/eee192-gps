@@ -44,6 +44,24 @@ static const bool DEBUG_MODE_PRINT_RAW_GPS = true;
 
 // prog_state_t typedef and PROG_FLAG_* definitions are in main.h
 
+// --- FAKE GPS DATA FOR DEBUGGING ---
+#define USE_FAKE_GPS_DATA false // Set to true to use fake data, false for real GPS
+                               // IMPORTANT: If true, real GPS data processing for GPGLL will be overridden
+
+#if USE_FAKE_GPS_DATA
+// Array of fake GPGLL sentences to cycle through
+static const char* fake_gpgll_sentences[] = {
+    "$GPGLL,4043.9620,N,07959.0350,W,235959.00,A,A*77", // Example: Pittsburgh, PA, USA (Night)
+    "$GPGLL,3403.7658,S,15052.9787,E,123045.10,A,A*6C", // Example: Sydney, Australia (Day)
+    "$GPGLL,4807.038,N,01131.000,E,104820.22,A,A*4D",   // Example: Munich, Germany
+    "$GPGLL,2237.0000,N,11408.0000,E,081530.00,A,A*7A", // Example: Hong Kong
+    "$GPGLL,,,,,123519.00,V,N*4D",                     // Example: Invalid/No Fix, time only
+    "$GPGLL,5130.0000,N,00007.0000,W,140000.00,A,A*78"  // Example: Greenwich, London
+};
+static const int num_fake_sentences = sizeof(fake_gpgll_sentences) / sizeof(fake_gpgll_sentences[0]);
+#endif
+// --- End FAKE GPS DATA ---
+
 // --- Static Function Prototypes (main.c internal logic) ---
 static void handle_platform_events(prog_state_t *ps);
 static void handle_gps_reception(prog_state_t *ps);
@@ -205,23 +223,90 @@ static void handle_gpgll_parsing_and_request_display(prog_state_t *ps, char* gpg
 static void prog_loop_one(prog_state_t *ps)
 {
     // Static buffer in main.c to hold the raw GPGLL NMEA sentence content before parsing.
-    static char gpgll_raw_nmea_to_parse[MAX_GPGLL_STORE_LEN_APP] = {0}; // MAX_GPGLL_STORE_LEN_APP from main.h
+    static char gpgll_raw_nmea_to_parse[MAX_GPGLL_STORE_LEN_APP] = {0}; 
     
+#if USE_FAKE_GPS_DATA
+    static int fake_data_index = 0;
+    static int loop_counter_for_fake_data = 0;
+    const int fake_data_interval = 5000; // Inject fake data every ~5000 loop iterations
+#endif
+
     LED_ACTIVITY_PORT_GROUP.PORT_OUTCLR = LED_ACTIVITY_PIN;
 
 	handle_platform_events(ps);
+    
+#if !USE_FAKE_GPS_DATA // Only handle real GPS reception if not using fake data for GPGLL
     handle_gps_reception(ps);
+#else
+    // If using fake data, we might still want to call platform_do_loop_one()
+    // and potentially clear any pending real GPS flags to avoid interference,
+    // or ensure the fake data injection below always takes precedence.
+    // For simplicity, if USE_FAKE_GPS_DATA is true, we'll just let the fake data
+    // overwrite gpgll_raw_nmea_to_parse.
+    // You could optionally disable actual GPS UART reception here if needed
+    // to save power or prevent buffer overflows if the GPS module is still sending.
+    // For now, we assume handle_gps_reception might still fill buffers, but
+    // handle_gps_sentence_processing will be affected by the fake data logic.
+    if (ps->gps_rx_desc.compl_type == PLATFORM_USART_RX_COMPL_DATA) {
+        // Minimal handling to keep GPS async reception going if it was started
+        // but we won't process its content for GPGLL if faking.
+        ps->gps_rx_desc.compl_type = PLATFORM_USART_RX_COMPL_NONE;
+        gps_platform_usart_cdc_rx_async(&ps->gps_rx_desc);
+    }
+#endif
 
     // --- UI and Data Transmission Handling ---
-    // Calls to UI module functions. These functions will internally manage
-    // PROG_FLAG_TX_BUFFER_BUSY and check platform_usart_cdc_tx_busy().
     ui_handle_banner_transmission(ps);
     
+#if !USE_FAKE_GPS_DATA
     handle_gps_sentence_processing(ps, gpgll_raw_nmea_to_parse, sizeof(gpgll_raw_nmea_to_parse));
+#else
+    // If using fake data, we control the PROG_FLAG_PARSED_GPGLL_PENDING flag
+    // and gpgll_raw_nmea_to_parse directly.
+    // We can effectively bypass handle_gps_sentence_processing's role for GPGLL.
+    // However, if DEBUG_MODE_PRINT_RAW_GPS is on and handle_gps_sentence_processing
+    // prints ALL raw sentences, you might see real non-GPGLL sentences if GPS is connected.
+    // This is usually fine for debugging.
+    // Let's ensure any flags set by real GPS processing are cleared if we are about to inject fake data.
+    if (ps->flags & PROG_FLAG_GPS_UPDATE_PENDING) {
+         // If real GPS data came in, but we are faking, clear its pending status
+         // or just let the fake data overwrite. For now, let it overwrite.
+    }
+#endif
+
+#if USE_FAKE_GPS_DATA
+    loop_counter_for_fake_data++;
+    if (loop_counter_for_fake_data >= fake_data_interval) {
+        loop_counter_for_fake_data = 0;
+
+        // Check if the previous fake/parsed data has been handled (flag cleared)
+        // or if the TX buffer is free, to avoid flooding or overwriting too quickly.
+        // This check helps ensure one piece of fake data is processed before injecting the next.
+        if (!(ps->flags & PROG_FLAG_PARSED_GPGLL_PENDING) && 
+            !(ps->flags & PROG_FLAG_TX_BUFFER_BUSY) && 
+            !platform_usart_cdc_tx_busy()) {
+
+            strncpy(gpgll_raw_nmea_to_parse, fake_gpgll_sentences[fake_data_index], MAX_GPGLL_STORE_LEN_APP - 1);
+            gpgll_raw_nmea_to_parse[MAX_GPGLL_STORE_LEN_APP - 1] = '\0'; // Ensure null termination
+            
+            ps->flags |= PROG_FLAG_PARSED_GPGLL_PENDING; // Signal that there's GPGLL data to parse
+
+            // Optionally, if DEBUG_MODE_PRINT_RAW_GPS is true, and you want to simulate the raw print
+            // separately for the fake data (though ui_handle_parsed_data_transmission might do it):
+            if (DEBUG_MODE_PRINT_RAW_GPS) {
+                // The ui_handle_parsed_data_transmission will receive this fake sentence
+                // and if DEBUG_MODE_PRINT_RAW_GPS is true, it should print it.
+                // No need to explicitly call ui_handle_raw_data_transmission here for the fake GPGLL
+                // as the existing flow for parsed data should cover it.
+            }
+            
+            fake_data_index = (fake_data_index + 1) % num_fake_sentences; // Move to next fake sentence
+        }
+    }
+#endif
 
     handle_gpgll_parsing_and_request_display(ps, gpgll_raw_nmea_to_parse);
 }
-
 int main(void)
 {
 	prog_state_t ps_instance;
