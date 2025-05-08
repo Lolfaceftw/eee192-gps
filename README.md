@@ -72,7 +72,7 @@ The project follows a modular architecture, separating low-level hardware intera
 *   **Software:**
     *   Microchip MPLAB X IDE (latest version recommended).
     *   Microchip XC32 C/C++ Compiler (latest version recommended).
-    *   A serial terminal program (e.g., CoolTerm, PuTTY, Tera Term) configured for the CDC port at 115200 baud, 8N1. Ensure your terminal supports ANSI escape codes for the best display experience.
+    *   A serial terminal program (e.g., CoolTerm, PuTTY, Tera Term) configured for the CDC port at 9600 baud, 8N1. Ensure your terminal supports ANSI escape codes for the best display experience.
 
 ## Building and Running
 
@@ -91,7 +91,7 @@ The project follows a modular architecture, separating low-level hardware intera
 5.  **Build:** Clean and Build the project (e.g., `Run -> Clean and Build Main Project`).
 6.  **Program:** Download and Run the project onto the microcontroller (e.g., `Run -> Run Main Project`). This will typically build, program, and start execution.
 7.  **Open Terminal:** Open your serial terminal program and connect to the CDC (Virtual COM Port) created by the Curiosity Nano board. Configure the terminal connection:
-    *   **Baud Rate:** 115200
+    *   **Baud Rate:** 9600
     *   **Data Bits:** 8
     *   **Parity:** None
     *   **Stop Bits:** 1
